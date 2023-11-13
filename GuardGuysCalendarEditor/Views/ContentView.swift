@@ -123,8 +123,8 @@ struct ContentView: View {
                 .scaledToFit()
                 .frame(width: 250)
                 .padding(.top, 30)
-            
         }
+        .frame(maxWidth: 600)
         .onAppear {
             email = ""
             password = ""
