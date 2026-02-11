@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+@MainActor
 class ScheduleWeekViewModel: ObservableObject {
     
     @Published var members: [UserData] = []
@@ -21,7 +22,7 @@ class ScheduleWeekViewModel: ObservableObject {
         Task {
             do {
                 let data = try await NetworkManager.shared.makeApiRequestFor(.getMembers)
-                let results = try JSONDecoder().decode([UserData].self, from: data!)
+                let results = try JSONDecoder().decode([UserData].self, from: data)
                 if results.contains(where: {$0.id == userId && $0.isAdmin == isAdmin }) { return }
                 isLoggedIn = false
             }
@@ -38,7 +39,7 @@ class ScheduleWeekViewModel: ObservableObject {
         Task {
             do {
                 let data = try await NetworkManager.shared.makeApiRequestFor(.getMembers)
-                let results = try JSONDecoder().decode([UserData].self, from: data!)
+                let results = try JSONDecoder().decode([UserData].self, from: data)
                 DispatchQueue.main.async { 
                     self.isLoading = false
                     completion(.success(results)) }
@@ -59,7 +60,7 @@ class ScheduleWeekViewModel: ObservableObject {
         Task {
             do {
                 let data = try await NetworkManager.shared.makeApiRequestFor(.getEvents(date: date))
-                let results = try JSONDecoder().decode([ScheduleEvent].self, from: data!)
+                let results = try JSONDecoder().decode([ScheduleEvent].self, from: data)
                 DispatchQueue.main.async {
                     self.isLoading = false
                     self.lastDate = convertDateToApiString(date: .now)

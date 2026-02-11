@@ -14,7 +14,7 @@ public class NetworkManager: NSObject {
     
     private override init() {}
     
-    func makeApiRequestFor(_ requestInfo: RequestType) async throws -> Data? {
+    func makeApiRequestFor(_ requestInfo: RequestType) async throws -> Data {
         
         // updates where the parameters are stored
         let urlParams = requestInfo.paramType == "body" ? "" : urlParameters(params: requestInfo.parameters)
@@ -52,7 +52,6 @@ public class NetworkManager: NSObject {
                 switch firstMessage {
                 case "user.password cannot be null": throw NetworkErrors.passwordValidation
                 case "Validation isEmail on email failed": 
-                    print("test")
                     throw NetworkErrors.emailValidation
                 default: throw NetworkErrors.unknownError
                 }
@@ -64,11 +63,14 @@ public class NetworkManager: NSObject {
     }
     
     func urlParameters(params: [String:Any]?) -> String {
-        guard params != nil && params!.count > 0 else { return "" }
-        var stringParameters = "?"
-        for (key, value) in params! { stringParameters += String("\(key)=\(value)&")}
-        let final = stringParameters.dropLast()
-        return String(final)
+        guard let params, !params.isEmpty else { return "" }
+        var components: [String] = []
+        for (key, value) in params {
+            let keyEncoded = String(describing: key).addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? String(describing: key)
+            let valueEncoded = String(describing: value).addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? String(describing: value)
+            components.append("\(keyEncoded)=\(valueEncoded)")
+        }
+        return components.isEmpty ? "" : "?" + components.joined(separator: "&")
     }
     
     func bodyParameters(params: [String:Any]?) -> Data? {
@@ -182,7 +184,7 @@ public enum RequestType: RequestTypeProtocol {
             if data.duration != nil { dict["duration"] =  data.duration }
             if data.userId != nil {
                 dict["user_id"] = data.userId == -1 ? nil as Any? : data.userId }
-            return dict
+            return dict as [String : Any]
             
         case let .addEvent(data):
             var dict: [String:Any?] = [:]
@@ -192,7 +194,7 @@ public enum RequestType: RequestTypeProtocol {
             if data.notes != nil { dict["notes"] = data.notes }
             if data.duration != nil { dict["duration"] =  data.duration }
             if data.userId != nil { dict["user_id"] = data.userId == -1 ? nil as Any? : data.userId }
-            return dict
+            return dict as [String : Any]
             
         }
         
@@ -227,7 +229,10 @@ public enum MethodTypes: String {
 }
 
 public struct UserData: Codable {
-    let uuid = UUID()
+    enum CodingKeys: String, CodingKey {
+        case id, username, email, password, isAdmin, createdAt, updatedAt
+    }
+    
     let id: Int?
     let username: String?
     let email: String?
@@ -235,6 +240,31 @@ public struct UserData: Codable {
     let isAdmin: Bool?
     let createdAt: String?
     let updatedAt: String?
+    
+    let uuid: UUID
+    
+    init(id: Int?, username: String?, email: String?, password: String?, isAdmin: Bool?, createdAt: String?, updatedAt: String?) {
+        self.id = id
+        self.username = username
+        self.email = email
+        self.password = password
+        self.isAdmin = isAdmin
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.uuid = UUID()
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try values.decodeIfPresent(Int.self, forKey: .id)
+        self.username = try values.decodeIfPresent(String.self, forKey: .username)
+        self.email = try values.decodeIfPresent(String.self, forKey: .email)
+        self.password = try values.decodeIfPresent(String.self, forKey: .password)
+        self.isAdmin = try values.decodeIfPresent(Bool.self, forKey: .isAdmin)
+        self.createdAt = try values.decodeIfPresent(String.self, forKey: .createdAt)
+        self.updatedAt = try values.decodeIfPresent(String.self, forKey: .updatedAt)
+        self.uuid = UUID()
+    }
 }
 
 public struct LoginResult: Codable {
