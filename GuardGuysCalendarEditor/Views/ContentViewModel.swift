@@ -26,7 +26,7 @@ class ContentViewModel: ObservableObject {
             }
             do {
                 let data = try await NetworkManager.shared.makeApiRequestFor(.login(email: email, password: password))
-                let results = try JSONDecoder().decode(LoginResult.self, from: data!)
+                let results = try JSONDecoder().decode(LoginResult.self, from: data)
                 await MainActor.run {
                     setUserLoginData(user: results.user)
                     success(results.user != nil ? true : false)
@@ -55,3 +55,4 @@ class ContentViewModel: ObservableObject {
         }
     }
 }
+

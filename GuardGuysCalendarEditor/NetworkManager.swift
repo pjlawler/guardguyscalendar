@@ -14,7 +14,7 @@ public class NetworkManager: NSObject {
     
     private override init() {}
     
-    func makeApiRequestFor(_ requestInfo: RequestType) async throws -> Data? {
+    func makeApiRequestFor(_ requestInfo: RequestType) async throws -> Data {
         
         // updates where the parameters are stored
         let urlParams = requestInfo.paramType == "body" ? "" : urlParameters(params: requestInfo.parameters)
@@ -52,7 +52,6 @@ public class NetworkManager: NSObject {
                 switch firstMessage {
                 case "user.password cannot be null": throw NetworkErrors.passwordValidation
                 case "Validation isEmail on email failed": 
-                    print("test")
                     throw NetworkErrors.emailValidation
                 default: throw NetworkErrors.unknownError
                 }
@@ -64,11 +63,14 @@ public class NetworkManager: NSObject {
     }
     
     func urlParameters(params: [String:Any]?) -> String {
-        guard params != nil && params!.count > 0 else { return "" }
-        var stringParameters = "?"
-        for (key, value) in params! { stringParameters += String("\(key)=\(value)&")}
-        let final = stringParameters.dropLast()
-        return String(final)
+        guard let params, !params.isEmpty else { return "" }
+        var components: [String] = []
+        for (key, value) in params {
+            let keyEncoded = String(describing: key).addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? String(describing: key)
+            let valueEncoded = String(describing: value).addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? String(describing: value)
+            components.append("\(keyEncoded)=\(valueEncoded)")
+        }
+        return components.isEmpty ? "" : "?" + components.joined(separator: "&")
     }
     
     func bodyParameters(params: [String:Any]?) -> Data? {

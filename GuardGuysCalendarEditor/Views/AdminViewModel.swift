@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-class AdminViewModel: ObservableObject {
+@MainActor class AdminViewModel: ObservableObject {
     
     @Published var members: [UserData] = []
     @Published var isLoading: Bool = false
@@ -17,50 +17,46 @@ class AdminViewModel: ObservableObject {
         members.removeAll()
         
         Task {
+            defer { Task { await MainActor.run { self.isLoading = false } } }
             do {
                 let data = try await NetworkManager.shared.makeApiRequestFor(.getMembers)
-                let results = try JSONDecoder().decode([UserData].self, from: data!)
-                DispatchQueue.main.async { 
-                    self.isLoading = false
-                    completion(.success(results)) }
+                let results = try JSONDecoder().decode([UserData].self, from: data)
+                await MainActor.run {
+                    completion(.success(results))
+                }
             }
             catch {
-                self.isLoading = false
-                print("Network Error \(error)")
-                completion(.failure(NetworkErrors.networkFailure))
+                await MainActor.run {
+                    print("Network Error \(error)")
+                    completion(.failure(NetworkErrors.networkFailure))
+                }
             }
         }
     }
     func addMember(data: UserData, success: @escaping(Bool) -> Void) {
         isLoading = true
         Task {
+            defer { Task { await MainActor.run { self.isLoading = false } } }
             do {
                 let _ = try await NetworkManager.shared.makeApiRequestFor(.addMember(data: data))
-                DispatchQueue.main.async { 
-                    self.isLoading = false
-                    success(true) }
+                await MainActor.run { success(true) }
             }
             catch {
                 print("Netwrok Error \(error)")
-                DispatchQueue.main.async {  
-                    self.isLoading = false
-                    success(false) }
+                await MainActor.run { success(false) }
             }
         }
     }
     func updateMember(id: Int, data: UserData, errorMessage: @escaping(NetworkErrors?) -> Void) {
         isLoading = true
         Task {
+            defer { Task { await MainActor.run { self.isLoading = false } } }
             do {
                 let _ = try await NetworkManager.shared.makeApiRequestFor(.editMember(id: id, data: data))
-                DispatchQueue.main.async { 
-                    self.isLoading = false
-                    errorMessage(nil) }
+                await MainActor.run { errorMessage(nil) }
             }
             catch {
-               
-                DispatchQueue.main.async {
-                    self.isLoading = false
+                await MainActor.run {
                     switch error {
                     case NetworkErrors.emailValidation: errorMessage(NetworkErrors.emailValidation)
                     case NetworkErrors.passwordValidation: errorMessage(NetworkErrors.passwordValidation)
@@ -73,20 +69,17 @@ class AdminViewModel: ObservableObject {
     func deleteMember(id: Int, success: @escaping(Bool) -> Void) {
         isLoading = true
         Task {
+            defer { Task { await MainActor.run { self.isLoading = false } } }
             do {
                 let _ = try await NetworkManager.shared.makeApiRequestFor(.deleteMember(id: id))
-                DispatchQueue.main.async {  
-                    self.isLoading = false
-                    success(true) }
-               
+                await MainActor.run { success(true) }
             }
             catch {
                 print("Netwrok Error \(error)")
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    success(false) }
+                await MainActor.run { success(false) }
             }
             
         }
     }
 }
+
